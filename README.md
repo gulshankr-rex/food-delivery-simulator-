@@ -21,11 +21,11 @@ food_delivery_gui.html | Web GUI — open in any browser, no install needed
 # Terminal version
 python food_delivery.py
 
-# Web GUI
+## Web GUI
 food_delivery_gui.html
 ## 🎟️ Coupon Codes
 
-'SAVE50'
+### 'SAVE50'
 WELCOME100'
 'FOOD30'
 'DISCOUNT20'
@@ -37,5 +37,6 @@ WELCOME100'
 - [ ] User login system
 - [ ] Live delivery map
 
-Built with ❤️ to demonstrate Python OOP skills. ⭐ Star if you found it helpful!
-
+Built to demonstrate Python OOP skills.
+## 📌 Status
+🔨 Work in progress
