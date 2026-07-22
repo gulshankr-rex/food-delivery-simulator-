@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Delivery Simulator</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --primary:#E25822;--primary-light:#FFF3EF;--primary-dark:#B84418;
+    --bg:#F7F5F2;--card:#FFFFFF;--border:#E8E4DF;
+    --text:#1A1A1A;--muted:#6B6B6B;--success:#1D7D4E;--success-bg:#EAF7EF;
+    --warn:#B45309;--warn-bg:#FEF3C7;--danger:#B91C1C;--danger-bg:#FEE2E2;
+    --info:#1E40AF;--info-bg:#EFF6FF;
+    --radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+  /* layout */
+  .app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  .sidebar{background:#1C1917;color:#E7E5E4;padding:0;display:flex;flex-direction:column}
+  .sidebar-header{padding:20px 20px 16px;border-bottom:1px solid #292524}
+  .sidebar-header h1{font-size:16px;font-weight:600;color:#FFF;letter-spacing:.3px}
+  .sidebar-header p{font-size:12px;color:#78716C;margin-top:3px}
+  .wallet-box{margin:16px;background:#292524;border-radius:8px;padding:12px 14px}
+  .wallet-box label{font-size:11px;color:#A8A29E;text-transform:uppercase;letter-spacing:.8px}
+  .wallet-box .amount{font-size:22px;font-weight:700;color:#FFF;margin-top:2px}
+  .topup-row{display:flex;gap:6px;margin-top:8px}
+  .topup-row input{flex:1;background:#1C1917;border:1px solid #44403C;border-radius:6px;padding:5px 8px;color:#FFF;font-size:13px;outline:none}
+  .topup-row input::placeholder{color:#57534E}
+  .topup-row button{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:500}
+  .topup-row button:hover{background:var(--primary-dark)}
+  nav{padding:12px 10px;flex:1}
+  nav .nav-section{font-size:10px;color:#57534E;text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px}
+  nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:#A8A29E;text-decoration:none;font-size:13px;cursor:pointer;transition:background .15s,color .15s;margin-bottom:1px}
+  nav a:hover{background:#292524;color:#FFF}
+  nav a.active{background:#292524;color:#FFF}
+  nav a .icon{width:16px;text-align:center;font-size:15px}
+  .cart-badge{margin-left:auto;background:var(--primary);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600}
+
+  /* main */
+  .main{padding:24px;overflow-y:auto}
+  .page{display:none}
+  .page.active{display:block}
+  .page-title{font-size:20px;font-weight:600;margin-bottom:18px;color:var(--text)}
+
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .card+.card{margin-top:12px}
+
+  /* restaurant grid */
+  .rest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+  .rest-card{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .rest-card:hover{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+  .rest-card.selected{border-color:var(--primary);background:var(--primary-light)}
+  .rest-card .rest-name{font-weight:600;font-size:14px}
+  .rest-card .rest-cuisine{font-size:12px;color:var(--muted);margin-top:2px}
+  .rest-card .rest-rating{margin-top:8px;font-size:12px;color:var(--warn);font-weight:500}
+
+  /* menu */
+  .menu-search{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-bottom:14px;background:var(--card)}
+  .menu-search:focus{border-color:var(--primary)}
+  .menu-table{width:100%;border-collapse:collapse}
+  .menu-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+  .menu-table td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .menu-table tr:last-child td{border-bottom:none}
+  .menu-table tr:hover td{background:#FAFAF9}
+  .veg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .veg{background:#16A34A}.nonveg{background:#DC2626}
+  .cat-badge{font-size:10px;background:#F5F5F4;color:#57534E;border-radius:4px;padding:2px 6px;margin-left:6px}
+  .qty-control{display:flex;align-items:center;gap:6px}
+  .qty-control button{width:26px;height:26px;border:1px solid var(--border);background:var(--card);border-radius:5px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--primary)}
+  .qty-control button:hover{background:var(--primary-light);border-color:var(--primary)}
+  .qty-control span{min-width:18px;text-align:center;font-weight:500}
+  .add-btn{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer}
+  .add-btn:hover{background:var(--primary-dark)}
+
+  /* cart */
+  .cart-item{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .cart-item:last-child{border-bottom:none}
+  .cart-item-name{font-weight:500;font-size:13px}
+  .cart-item-price{font-size:12px;color:var(--muted)}
+  .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px}
+  .remove-btn:hover{background:var(--danger-bg)}
+  .subtotal-row{display:flex;justify-content:space-between;padding:10px 0 0;font-weight:600}
+
+  /* coupon */
+  .coupon-row{display:flex;gap:8px;margin-top:12px}
+  .coupon-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+  .coupon-row input:focus{border-color:var(--primary)}
+  .coupon-row button{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer}
+
+  /* payment */
+  .pay-methods{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  .pay-method{border:1px solid var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;transition:all .15s}
+  .pay-method:hover{border-color:var(--primary);background:var(--primary-light)}
+  .pay-method.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:500}
+
+  /* order btn */
+  .order-btn{width:100%;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;margin-top:14px}
+  .order-btn:hover{background:var(--primary-dark)}
+  .order-btn:disabled{background:#C7C3BC;cursor:not-allowed}
+
+  /* receipt / tracking */
+  .receipt{background:#FAFAF9;border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px}
+  .receipt-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--muted)}
+  .receipt-row.total{font-weight:700;color:var(--text);border-top:1px solid var(--border);margin-top:6px;padding-top:10px;font-size:14px}
+  .receipt-row.discount{color:var(--success)}
+  .tracking-steps{list-style:none;padding:0;margin-top:12px}
+  .tracking-steps li{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
+  .step-dot{width:20px;height:20px;border-radius:50%;background:var(--success-bg);border:2px solid var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;color:var(--success);font-weight:700}
+  .step-text{font-size:13px;color:var(--text);padding-top:1px}
+
+  /* rating */
+  .stars{display:flex;gap:4px;margin:8px 0}
+  .star{font-size:26px;cursor:pointer;color:#D1CDC7;transition:color .1s;line-height:1}
+  .star.lit{color:#F59E0B}
+  .review-input{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;outline:none;resize:vertical;min-height:72px;font-family:inherit;margin-top:8px}
+  .review-input:focus{border-color:var(--primary)}
+
+  /* alerts */
+  .alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+  .alert-success{background:var(--success-bg);color:var(--success)}
+  .alert-warn{background:var(--warn-bg);color:var(--warn)}
+  .alert-danger{background:var(--danger-bg);color:var(--danger)}
+  .alert-info{background:var(--info-bg);color:var(--info)}
+
+  /* order history */
+  .history-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+  .history-card .h-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+  .history-card .h-rest{font-weight:600;font-size:14px}
+  .history-card .h-date{font-size:11px;color:var(--muted)}
+  .history-card .h-items{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .history-card .h-footer{display:flex;justify-content:space-between;align-items:center}
+  .status-pill{font-size:11px;background:var(--success-bg);color:var(--success);border-radius:12px;padding:2px 8px;font-weight:500}
+  .amount-large{font-weight:700;font-size:15px}
+
+  /* empty state */
+  .empty{text-align:center;padding:48px 24px;color:var(--muted)}
+  .empty-icon{font-size:40px;margin-bottom:12px}
+  .empty p{font-size:14px}
+
+  /* misc */
+  .divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+  .label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+  .section-title{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)}
+  .tag{display:inline-block;font-size:11px;background:#F5F5F4;color:#57534E;border-radius:4px;padding:2px 7px;margin-right:4px}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .coupon-hint{font-size:11px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>&#127828; Food Delivery</h1>
+    <p id="customer-greeting">Loading…</p>
+  </div>
+
+  <div class="wallet-box">
+    <label>Wallet Balance</label>
+    <div class="amount" id="wallet-display">₹0</div>
+    <div class="topup-row">
+      <input type="number" id="topup-input" placeholder="Add ₹" min="1">
+      <button onclick="topUp()">Add</button>
+    </div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Menu</div>
+    <a class="active" onclick="showPage('order')" id="nav-order">
+      <span class="icon">&#127828;</span> Order Food
+    </a>
+    <a onclick="showPage('cart')" id="nav-cart">
+      <span class="icon">&#128722;</span> My Cart
+      <span class="cart-badge" id="cart-badge">0</span>
+    </a>
+    <a onclick="showPage('history')" id="nav-history">
+      <span class="icon">&#128203;</span> Order History
+    </a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ORDER PAGE -->
+  <div class="page active" id="page-order">
+    <div class="page-title">Choose a restaurant</div>
+    <div class="rest-grid" id="rest-grid"></div>
+
+    <div id="menu-section" style="display:none">
+      <div class="flex-between">
+        <div class="section-title" id="menu-title">Menu</div>
+        <button style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--muted)" onclick="clearRestSelection()">&#8592; Change restaurant</button>
+      </div>
+      <input class="menu-search" type="text" placeholder="Search items…" id="menu-search" oninput="renderMenu()">
+      <div id="menu-container"></div>
+    </div>
+  </div>
+
+  <!-- CART PAGE -->
+  <div class="page" id="page-cart">
+    <div class="page-title">My Cart</div>
+    <div id="cart-content"></div>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="page-title">Order History</div>
+    <div id="history-content"></div>
+  </div>
+
+</main>
+</div>
+
+<script>
+const RESTAURANTS = [
+  {id:0,name:"Pizza Hub",cuisine:"Italian",emoji:"🍕",items:[
+    {name:"Margherita Pizza",price:250,category:"Pizza",veg:true},
+    {name:"Cheese Burst Pizza",price:400,category:"Pizza",veg:true},
+    {name:"Farmhouse Pizza",price:350,category:"Pizza",veg:true},
+    {name:"Garlic Bread",price:120,category:"Starters",veg:true},
+    {name:"Pasta Arrabbiata",price:220,category:"Pasta",veg:true},
+    {name:"Triamisu",price:600,category:"pasta",veg:true},
+    {name:"onion pizza",price:250,category:"pizza",veg:true},
+    {name:"Tamato pizza",price:250,category:"pizza",veg:true},
+    {name:"perry perry pizza",price:350,category:"pizza",veg:true}
+
+  ]},
+  {id:1,name:"Burger Point",cuisine:"American",emoji:"🍔",items:[
+    {name:"Veg Burger",price:120,category:"Burgers",veg:true},
+    {name:"Cheese Burger",price:180,category:"Burgers",veg:true},
+    {name:"Chicken Burger",price:220,category:"Burgers",veg:false},
+    {name:"French Fries",price:100,category:"Sides",veg:true},
+    {name:"Onion Rings",price:90,category:"Sides",veg:true},
+
+  ]},
+  {id:2,name:"Indian Spice",cuisine:"North Indian",emoji:"🍛",items:[
+    {name:"Butter Chicken",price:320,category:"Main",veg:false},
+    {name:"Paneer Butter Masala",price:280,category:"Main",veg:true},
+    {name:"Biryani",price:250,category:"Rice",veg:false},
+    {name:"Veg Biryani",price:200,category:"Rice",veg:true},
+    {name:"Dal Tadka",price:180,category:"Main",veg:true},
+    {name:"Gulab Jamun",price:80,category:"Dessert",veg:true},
+    {name:"Naan",price:40,category:"Bread",veg:true},
+  ]},
+  {id:3,name:"Sushi Garden",cuisine:"Japanese",emoji:"🍱",items:[
+    {name:"Veg Sushi Roll",price:280,category:"Sushi",veg:true},
+    {name:"California Roll",price:320,category:"Sushi",veg:false},
+    {name:"Miso Soup",price:120,category:"Soup",veg:true},
+    {name:"Edamame",price:150,category:"Starters",veg:true},
+    {name:"Ramen",price:350,category:"Noodles",veg:false},
+  ]},
+  {id:4,name:"drinks section",cuisine:" all types of drinks ",emoji:"🍹🥂",items:[
+    {name:"Cold Drink",price:60,category:"Beverages",veg:true},
+    {name:"Cold coffee",price:150,category:"coffee",veg:true},
+    {name:"hot coffee",price:150,category:"coffee",veg:true},
+    {name:"Coffee cappuccino",price:250,category:"coffee",veg:true},
+    {name:"macha",price:250,category:"coffee",veg:true},
+    {name:"smirnoff jamun",price:650,category:"alcohol",veg:true},
+    {name:"smirnoff Mango",price:650,category:"alcohol",veg:true},
+    {name:"smirnoff zesty",price:650,category:"alcohol",veg:true},
+    {name:"Lichi",price:50,category:"soft drink",veg:true},
+    {name:"sprite",price:100,category:"soft drink",veg:true},
+    {name:"thums up",price:100,category:"soft drink",veg:true},
+    {name:"frooty",price:100,category:"soft drink",veg:true},
+    {name:"coca cola",price:100,category:"soft drink",veg:true},
+
+  ]}
+];
+
+const COUPONS = {SAVE50:50,WELCOME100:100,FOOD30:30,DISCOUNT20:20};
+const PARTNERS = ["Rahul","Aman","Rohit","Vikas","Priya","Karan"];
+
+let state = {
+  customerName: "",
+  wallet: 500,
+  cart: [],
+  selectedRest: null,
+  orderHistory: [],
+  cartRestId: null,
+  discount: 0,
+  appliedCoupon: "",
+  payMethod: "Wallet",
+  starRating: 0,
+  pendingOrder: null,
+};
+
+function init() {
+  let name = localStorage.getItem("fd_name") || prompt("Welcome! Enter your name:") || "Guest";
+  let bal = parseFloat(localStorage.getItem("fd_wallet") || "500");
+  state.customerName = name;
+  state.wallet = isNaN(bal) ? 500 : bal;
+  let hist = localStorage.getItem("fd_history");
+  if (hist) try { state.orderHistory = JSON.parse(hist); } catch(e){}
+  document.getElementById("customer-greeting").textContent = "Hi, " + name + "!";
+  updateWallet();
+  renderRestaurants();
+}
+
+function save() {
+  localStorage.setItem("fd_name", state.customerName);
+  localStorage.setItem("fd_wallet", state.wallet.toString());
+  localStorage.setItem("fd_history", JSON.stringify(state.orderHistory));
+}
+
+function updateWallet() {
+  document.getElementById("wallet-display").textContent = "₹" + Math.round(state.wallet);
+}
+
+function topUp() {
+  const v = parseFloat(document.getElementById("topup-input").value);
+  if (!v || v <= 0) return showAlert("wallet-alert", "Enter a valid amount", "warn");
+  state.wallet += v;
+  document.getElementById("topup-input").value = "";
+  updateWallet();
+  save();
+  showAlert("wallet-alert-inline", "₹" + v + " added to wallet!", "success");
+}
+
+function showPage(id) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll("nav a").forEach(a => a.classList.remove("active"));
+  document.getElementById("page-" + id).classList.add("active");
+  document.getElementById("nav-" + id).classList.add("active");
+  if (id === "cart") renderCart();
+  if (id === "history") renderHistory();
+}
+
+function showAlert(containerId, msg, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '<div class="alert alert-' + type + '">' + msg + '</div>';
+  setTimeout(() => { el.innerHTML = ""; }, 3000);
+}
+
+function updateCartBadge() {
+  const total = state.cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById("cart-badge").textContent = total;
+}
+
+// ── RESTAURANTS ──────────────────────────────────────────
+function renderRestaurants() {
+  const grid = document.getElementById("rest-grid");
+  grid.innerHTML = RESTAURANTS.map(r => `
+    <div class="rest-card" id="rcard-${r.id}" onclick="selectRestaurant(${r.id})">
+      <div style="font-size:28px;margin-bottom:6px">${r.emoji}</div>
+      <div class="rest-name">${r.name}</div>
+      <div class="rest-cuisine">${r.cuisine}</div>
+      <div class="rest-rating">&#9733; ${restaurantRating(r.id)}</div>
+    </div>
+  `).join("");
+}
+
+function restaurantRating(rid) {
+  const orders = state.orderHistory.filter(o => o.restId === rid && o.rating);
+  if (!orders.length) return "New";
+  const avg = orders.reduce((s,o) => s + o.rating, 0) / orders.length;
+  return avg.toFixed(1);
+}
+
+function selectRestaurant(id) {
+  state.selectedRest = id;
+  document.querySelectorAll(".rest-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("rcard-" + id).classList.add("selected");
+  const r = RESTAURANTS[id];
+  document.getElementById("menu-title").textContent = r.emoji + " " + r.name + " — " + r.cuisine;
+  document.getElementById("menu-section").style.display = "block";
+  document.getElementById("menu-search").value = "";
+  renderMenu();
+  document.getElementById("menu-section").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function clearRestSelection() {
+  state.selectedRest = null;
+  document.querySelectorAll(".rest-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("menu-section").style.display = "none";
+}
+
+function renderMenu() {
+  if (state.selectedRest === null) return;
+  const r = RESTAURANTS[state.selectedRest];
+  const q = document.getElementById("menu-search").value.toLowerCase();
+  const items = r.items.filter(i =>
+    !q || i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)
+  );
+  const container = document.getElementById("menu-container");
+  if (!items.length) {
+    container.innerHTML = '<div class="empty"><p>No items found.</p></div>';
+    return;
+  }
+  container.innerHTML = `
+    <table class="menu-table">
+      <thead><tr>
+        <th>Item</th><th>Category</th>
+        <th style="text-align:right">Price</th>
+        <th style="text-align:center">Qty</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${items.map((item, idx) => {
+          const cartEntry = state.cart.find(c => c.name === item.name && c.restId === state.selectedRest);
+          const qty = cartEntry ? cartEntry.qty : 0;
+          return `
+          <tr>
+            <td>
+              <span class="veg-dot ${item.veg ? 'veg' : 'nonveg'}"></span>
+              <strong>${item.name}</strong>
+            </td>
+            <td><span class="cat-badge">${item.category}</span></td>
+            <td style="text-align:right;font-weight:500">₹${item.price}</td>
+            <td style="text-align:center">
+              <div class="qty-control">
+                <button onclick="changeQty(${state.selectedRest},'${escQ(item.name)}',-1)">−</button>
+                <span id="qty-${state.selectedRest}-${idx}">${qty}</span>
+                <button onclick="changeQty(${state.selectedRest},'${escQ(item.name)}',1)">+</button>
+              </div>
+            </td>
+            <td>
+              <button class="add-btn" onclick="addToCart(${state.selectedRest},'${escQ(item.name)}')">Add</button>
+            </td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function escQ(s) { return s.replace(/'/g, "\\'"); }
+
+function changeQty(rid, name, delta) {
+  const entry = state.cart.find(c => c.name === name && c.restId === rid);
+  if (entry) {
+    entry.qty = Math.max(0, entry.qty + delta);
+    if (entry.qty === 0) state.cart = state.cart.filter(c => !(c.name === name && c.restId === rid));
+  } else if (delta > 0) {
+    const item = RESTAURANTS[rid].items.find(i => i.name === name);
+    if (item) state.cart.push({name:item.name,price:item.price,qty:1,restId:rid,veg:item.veg});
+  }
+  if (state.cart.length > 0) state.cartRestId = state.cart[0].restId;
+  else state.cartRestId = null;
+  updateCartBadge();
+  renderMenu();
+}
+
+function addToCart(rid, name) {
+  if (state.cartRestId !== null && state.cartRestId !== rid) {
+    if (!confirm("Your cart has items from another restaurant. Clear cart and add from " + RESTAURANTS[rid].name + "?")) return;
+    state.cart = [];
+    state.cartRestId = null;
+  }
+  changeQty(rid, name, 1);
+}
+
+// ── CART ─────────────────────────────────────────────────
+function cartTotal() { return state.cart.reduce((s,i) => s + i.price * i.qty, 0); }
+
+function renderCart() {
+  const el = document.getElementById("cart-content");
+  if (!state.cart.length) {
+    el.innerHTML = '<div id="wallet-alert-inline"></div><div class="empty"><div class="empty-icon">&#128722;</div><p>Your cart is empty.<br>Order something delicious!</p></div>';
+    return;
+  }
+  const gross = cartTotal();
+  const final = Math.max(0, gross - state.discount);
+  const restName = RESTAURANTS[state.cartRestId]?.name || "";
+
+  el.innerHTML = `
+    <div id="wallet-alert-inline"></div>
+    <div class="card">
+      <div class="section-title" style="margin-bottom:12px">Items from ${restName}</div>
+      <div id="cart-items">
+        ${state.cart.map((item,i) => `
+          <div class="cart-item">
+            <div>
+              <span class="veg-dot ${item.veg?'veg':'nonveg'}"></span>
+              <span class="cart-item-name">${item.name}</span>
+              <div class="cart-item-price">₹${item.price} × ${item.qty}</div>
+            </div>
+            <div class="qty-control">
+              <button onclick="changeQty(${item.restId},'${escQ(item.name)}',-1);renderCart()">−</button>
+              <span>${item.qty}</span>
+              <button onclick="changeQty(${item.restId},'${escQ(item.name)}',1);renderCart()">+</button>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:600">₹${item.price * item.qty}</div>
+              <button class="remove-btn" onclick="removeFromCart(${i})">&#128465;</button>
+            </div>
+          </div>
+        `).join("")}
+        <div class="subtotal-row">
+          <span>Subtotal</span><span>₹${gross}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="section-title">Apply Coupon</div>
+      <div class="coupon-row">
+        <input type="text" id="coupon-input" placeholder="Enter coupon code" value="${state.appliedCoupon}" oninput="state.appliedCoupon=this.value.toUpperCase();this.value=state.appliedCoupon">
+        <button onclick="applyCoupon()">Apply</button>
+      </div>
+      <div class="coupon-hint">Try: SAVE50 · WELCOME100 · FOOD30 · DISCOUNT20</div>
+      <div id="coupon-alert"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="section-title">Payment Method</div>
+      <div class="pay-methods" id="pay-methods">
+        ${["Wallet","Cash on Delivery","UPI"].map(m => `
+          <div class="pay-method ${state.payMethod===m?'selected':''}" onclick="selectPay('${m}')">${m}${m==='Wallet'?' (₹'+Math.round(state.wallet)+')':''}</div>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="section-title">Bill Summary</div>
+      <div class="receipt">
+        <div class="receipt-row"><span>Subtotal</span><span>₹${gross}</span></div>
+        ${state.discount ? `<div class="receipt-row discount"><span>Discount (${state.appliedCoupon})</span><span>− ₹${state.discount}</span></div>` : ""}
+        <div class="receipt-row total"><span>Total Payable</span><span>₹${final}</span></div>
+      </div>
+      <button class="order-btn" onclick="placeOrder()">Place Order — ₹${final}</button>
+    </div>
+  `;
+}
+
+function removeFromCart(idx) {
+  state.cart.splice(idx, 1);
+  if (!state.cart.length) state.cartRestId = null;
+  updateCartBadge();
+  renderCart();
+}
+
+function applyCoupon() {
+  const code = document.getElementById("coupon-input").value.trim().toUpperCase();
+  if (COUPONS[code]) {
+    state.discount = COUPONS[code];
+    state.appliedCoupon = code;
+    showAlert("coupon-alert", "Coupon applied! You save ₹" + state.discount, "success");
+    renderCart();
+  } else {
+    state.discount = 0;
+    showAlert("coupon-alert", "Invalid coupon code.", "danger");
+  }
+}
+
+function selectPay(method) {
+  state.payMethod = method;
+  renderCart();
+}
+
+function placeOrder() {
+  const gross = cartTotal();
+  const final = Math.max(0, gross - state.discount);
+  if (state.payMethod === "Wallet") {
+    if (state.wallet < final) {
+      showAlert("wallet-alert-inline", "Insufficient wallet balance. Top up or choose another payment method.", "danger");
+      return;
+    }
+    state.wallet -= final;
+    updateWallet();
+  }
+  const partner = PARTNERS[Math.floor(Math.random() * PARTNERS.length)];
+  const eta = Math.floor(Math.random() * 31) + 20;
+  const restId = state.cartRestId;
+  const items = state.cart.map(c => c.name + " ×" + c.qty).join(", ");
+  state.pendingOrder = {
+    id: Date.now(),
+    restId,
+    restName: RESTAURANTS[restId].name,
+    items,
+    cartSnapshot: [...state.cart],
+    gross,
+    discount: state.discount,
+    final,
+    payment: state.payMethod,
+    partner,
+    eta,
+    date: new Date().toLocaleString("en-IN"),
+    rating: 0,
+    review: "",
+    status: "Delivered",
+  };
+  state.cart = [];
+  state.cartRestId = null;
+  state.discount = 0;
+  state.appliedCoupon = "";
+  updateCartBadge();
+  save();
+  renderOrderConfirmation();
+}
+
+function renderOrderConfirmation() {
+  const o = state.pendingOrder;
+  const el = document.getElementById("cart-content");
+  el.innerHTML = `
+    <div class="alert alert-success" style="font-size:14px;font-weight:500">Order placed successfully! Estimated delivery: ~${o.eta} min</div>
+
+    <div class="card">
+      <div class="section-title">Receipt</div>
+      <div class="receipt">
+        <div class="receipt-row"><span>Restaurant</span><span>${o.restName}</span></div>
+        <div class="receipt-row"><span>Items</span><span style="text-align:right;max-width:200px">${o.items}</span></div>
+        <div class="receipt-row"><span>Partner</span><span>${o.partner}</span></div>
+        <div class="receipt-row"><span>Payment</span><span>${o.payment}</span></div>
+        <div class="receipt-row"><span>Date</span><span>${o.date}</span></div>
+        ${o.discount ? `<div class="receipt-row discount"><span>Discount</span><span>− ₹${o.discount}</span></div>` : ""}
+        <div class="receipt-row total"><span>Total Paid</span><span>₹${o.final}</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="section-title">Delivery Tracking</div>
+      <ul class="tracking-steps">
+        ${["Order Confirmed","Restaurant Preparing Food","Food Packed","Partner Picked Up Order","Out For Delivery","Delivered"].map(s =>
+          `<li><div class="step-dot">✓</div><span class="step-text">${s}</span></li>`
+        ).join("")}
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="section-title">Rate ${o.restName}</div>
+      <div class="stars" id="stars">
+        ${[1,2,3,4,5].map(n => `<span class="star" data-n="${n}" onclick="setRating(${n})">&#9733;</span>`).join("")}
+      </div>
+      <textarea class="review-input" id="review-input" placeholder="Write a review (optional)…"></textarea>
+      <button class="order-btn" style="margin-top:10px" onclick="submitRating()">Submit Review &amp; Save Order</button>
+    </div>
+  `;
+}
+
+function setRating(n) {
+  state.pendingOrder.rating = n;
+  document.querySelectorAll(".star").forEach(s => {
+    s.classList.toggle("lit", parseInt(s.dataset.n) <= n);
+  });
+}
+
+function submitRating() {
+  if (!state.pendingOrder) return;
+  state.pendingOrder.review = document.getElementById("review-input")?.value || "";
+  state.orderHistory.unshift(state.pendingOrder);
+  state.pendingOrder = null;
+  save();
+  renderRestaurants();
+  const el = document.getElementById("cart-content");
+  el.innerHTML = `
+    <div class="alert alert-success">Thank you! Your order has been saved.</div>
+    <div class="empty"><div class="empty-icon">&#127881;</div><p>Order complete. Browse more restaurants!</p></div>
+  `;
+}
+
+// ── HISTORY ──────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById("history-content");
+  if (!state.orderHistory.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div><p>No orders yet.</p></div>';
+    return;
+  }
+  el.innerHTML = state.orderHistory.map((o,i) => `
+    <div class="history-card">
+      <div class="h-header">
+        <div>
+          <div class="h-rest">${o.restName}</div>
+          <div class="h-date">${o.date}</div>
+        </div>
+        <span class="status-pill">&#10003; ${o.status}</span>
+      </div>
+      <div class="h-items">${o.items}</div>
+      <div class="h-footer">
+        <div>
+          <span class="tag">${o.payment}</span>
+          <span class="tag">&#128666; ${o.partner}</span>
+          ${o.rating ? '<span class="tag">&#9733; ' + o.rating + '/5</span>' : ''}
+        </div>
+        <span class="amount-large">₹${o.final}</span>
+      </div>
+      ${o.review ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:8px">"${o.review}"</div>` : ""}
+    </div>
+  `).join("");
+}
+
+init();
+</script>
+</body>
+</html>
